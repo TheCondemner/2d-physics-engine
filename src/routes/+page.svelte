@@ -1,2 +1,10 @@
-<h1 class="text-red-300">Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<script lang="ts">
+	import Render from './../lib/Render.svelte';
+	import { onMount } from 'svelte';
+</script>
+
+<div class="w-full grow">
+    <Render />
+</div>
+
+<style></style>
