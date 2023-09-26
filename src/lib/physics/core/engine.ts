@@ -5,6 +5,8 @@
 
 
 /* ----------------------- EXPORTS ---------------------- */
+class Engine {
+    
+}
 
-
-export { }
+export { Engine }

@@ -1,5 +1,6 @@
 /* ----------------------- IMPORTS ---------------------- */
 import type { Body } from "./body";
+import _ from "lodash"
 
 /* ---------------------- VARIABLES --------------------- */
 
@@ -17,7 +18,7 @@ export class Collection {
     // constraints: Array<"">         = []
 
     constructor(options: Partial<Collection>) {
-        Object.assign(this, options)
+        _.merge(this, options)
         console.log(this)
     }
 
