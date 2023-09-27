@@ -73,23 +73,11 @@ class Body {
         // Calculate vertices for polygon with n-vertices
         else {
             this.origin = {x: this.radius, y: this.radius} // Move origin to cartesian center
-            this.vertices = this._calculateVertexPos(this.vertexNum)
+            this.vertices = this._calculateVertexPos()
         }
         
         // Re-calculate edges for each vertex
-        for (let i=0; i<this.vertexNum; i++) {
-            for (let j=i+1; j<this.vertexNum; j++) {
-                const p1 = this.vertices[i]
-                const p2 = this.vertices[j]
-                // Calculate if the edge is internal
-                const external = (p1.id+1===p2.id)||(p1.id-1===p2.id)||(p1.id-1<0&&p2.id===this.vertexNum-1)
-
-                this.edges.push({
-                    points: [p1, p2],
-                    internal: !external
-                })
-            }
-        }
+        this.edges = this._calculateEdges()
     }
 
     private _calculateVertexPos(n = this.vertexNum, r = this.radius): Vertex[] {
@@ -131,7 +119,25 @@ class Body {
         return vertices
     }
 
-    private _calculateEdges() {}
+    private _calculateEdges(n = this.vertexNum): Edge[] {
+        const edges: Edge[] = []
+
+        for (let i=0; i<n; i++) {
+            for (let j=i+1; j<n; j++) {
+                const p1 = this.vertices[i]
+                const p2 = this.vertices[j]
+                // Calculate if the edge is internal
+                const external = (p1.id+1===p2.id)||(p1.id-1===p2.id)||(p1.id-1<0&&p2.id===n-1)
+
+                edges.push({
+                    points: [p1, p2],
+                    internal: !external
+                })
+            }
+        }
+
+        return edges
+    }
 }
 
 export { Form, Body }
