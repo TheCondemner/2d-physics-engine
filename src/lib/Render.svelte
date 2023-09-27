@@ -22,50 +22,102 @@
     
     // Render objects
     let world = new Collection({ name: "World" })
-    let body = new Body({
-        name: "Test Polygon",
-        position: {x: 100, y: 100},
-        width: 100,
-        height: 200,
-        vertexNum: 5,
-        render: {
-            fillStyle: "blue",
-            lineWidth: 10,
-        }
-    })
+
+    let hexagon = new Body({ position: {x: 10, y: 10}, vertexNum: 6, })
+    let octagon = new Body({ position: {x: 310, y: 10}, vertexNum: 8, })
+    let decagon = new Body({ position: {x: 610, y: 10}, vertexNum: 10, })
+
+    let triangle = new Body({ position: {x: 10, y: 300}, vertexNum: 3, })
+    let pentagon = new Body({ position: {x: 310, y: 300}, vertexNum: 5, })
+    let septagon = new Body({ position: {x: 610, y: 300}, vertexNum: 7, })
+    
+    // let circle = new Body({ position: {x: 810, y: 10 }, radius: 200, form: Form.Circle })
+    // let polyCircle = new Body({ position: {x: 810, y: 10}, radius: 200, vertexNum: 30, })
+    let rect = new Body({ position: {x: 810, y: 10}, vertexNum: 4})
 
     world.add([
-        body,
+        octagon,
+        decagon,
+        hexagon,
+
+        triangle,
+        pentagon,
+        septagon,
+
+        // circle,
+        // polyCircle
+        rect
     ])
 
     /* ---------------------- FUNCTIONS --------------------- */
     function draw() {
-        console.log("draw()")
-
         ctx.clearRect(0, 0, size.width, size.height)
 
-        function _polygon(body: Body) {
-            console.log("body")
+        function point(x: number, y: number, color="red", size=2) {
+            const _strokeStyle = ctx.strokeStyle
+            const _lineWidth = ctx.lineWidth
 
+            ctx.strokeStyle = color
+            ctx.lineWidth = 1
+            ctx.strokeRect(x, y, size, size)
+            ctx.strokeStyle = _strokeStyle
+            ctx.lineWidth = _lineWidth
+        }
+
+        function _polygon(body: Body) {
+            ctx.beginPath()
+            
             ctx.strokeStyle = body.render.strokeStyle
             ctx.fillStyle = body.render.fillStyle
             ctx.lineWidth = body.render.lineWidth
 
-            ctx.beginPath()
-            ctx.moveTo(body.position.x + body.vertices[0].x, body.position.y + body.vertices[0].y)
+            for (let line of body.lines) {
+                const p1 = line.points[0]
+                const p2 = line.points[1]
+                const origin = {
+                    x: body.position.x + body.radius,
+                    y: body.position.y + body.radius
+                }
 
-            for (let vertex of body.vertices) ctx.lineTo(body.position.x + vertex.x, body.position.y + vertex.y) 
+                // Points
+                point(origin.x + p1.x, origin.y + p1.y, "yellow")
+                point(origin.x + p2.x, origin.y + p2.y, "yellow")
+                // Lines
+                ctx.moveTo(origin.x + p1.x, origin.y + p1.y)
+                ctx.lineTo(origin.x + p2.x, origin.y + p2.y)
+            }
 
-            ctx.closePath()
             ctx.stroke()
-            ctx.fill()
+            // ctx.fill()
+            ctx.closePath()
+
+            // Show top-left corner
+            point(body.position.x, body.position.y, "red")
+            // Show origin?
+            point(body.position.x+body.radius, body.position.y+body.radius, "blue")
+        }
+
+        function _circle(body: Body) {
+            // Show top-left corner
+            point(body.position.x, body.position.y, "red")
+            // Show origin?
+            point(body.position.x+body.radius, body.position.y+body.radius, "blue")
+
+            ctx.beginPath()
+            
+            ctx.arc(body.position.x+body.radius, body.position.y+body.radius, body.radius, 0, 2*Math.PI)
+
+            ctx.stroke()
+            // ctx.fill()
+            ctx.closePath()
         }
 
         world.bodies.forEach(body => {
-            console.log("body", body, body.form)
             if (body.form === Form.Polygon) { 
-                console.log("polygon")
                 _polygon(body)
+            } else if (body.form === Form.Circle) {
+                console.log("Circle")
+                _circle(body)
             }
         });
     }
@@ -74,7 +126,7 @@
         requestAnimationFrame(run)
         
         if (halt) { 
-            console.log("Halting")
+            // console.log("Halting")
             return
         }
 
@@ -86,6 +138,7 @@
 
         if (delta >= dfps) {
             draw()
+            halt= true
         }
     }
 
@@ -109,7 +162,7 @@
 
         ctx = canvas.getContext("2d")
 
-        // run()
+        run()
     })
 </script>
     
