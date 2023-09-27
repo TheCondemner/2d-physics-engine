@@ -19,7 +19,6 @@ export class Collection {
 
     constructor(options: Partial<Collection>) {
         _.merge(this, options)
-        console.log(this)
     }
 
     // Methods
@@ -27,7 +26,6 @@ export class Collection {
     add(object: any) {
         const unfiltered = [].concat(object)
         const objects = unfiltered.filter((item) => typeof item === "object" && Object.hasOwn(item, "type")) // Ensure that objects have a "type" property
-        console.log("Collection.add()", objects)
 
         // Iterate through filtered objects and perform required append operations
         for (object of objects) {

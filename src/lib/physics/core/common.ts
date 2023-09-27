@@ -6,9 +6,9 @@
 
 /* ----------------------- EXPORTS ---------------------- */
 export interface RenderProps {
-    fillStyle?: string | CanvasGradient | CanvasPattern
+    fillStyle?:   string | CanvasGradient | CanvasPattern
     strokeStyle?: string | CanvasGradient | CanvasPattern
-    lineWidth?: number
+    lineWidth?:   number
 }
 
 export function assign() {  

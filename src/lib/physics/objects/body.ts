@@ -14,8 +14,12 @@ interface Coord {
     y: number
 }
 
-interface Line {
-    points:   Array<{ x:number, y:number }>
+interface Vertex extends Coord {
+    id: number
+}
+
+interface Edge {
+    points:   Vertex[]
     internal: boolean
 }
 
@@ -27,12 +31,13 @@ class Body {
     name:          string               = "DEFAULT_BODY"
     parent:        null | Collection    = null
     // Properties
-    form:          Form                 = Form.Polygon // Mostly interpreted in Render, dictates how to display the given object
-    position:      Coord                = {x: 0, y: 0} // Considers position; uses HTML Canvas positioning
+    form:          "polygon"|"circle"   = "polygon" // Mostly interpreted in Render, dictates how to display the given object
+    position:      Coord                = {x: 0, y: 0} // Considers position; measured from top-left
+    origin:        Coord                = {x: 0, y: 0} // What this.position is translated by for render operations; e.g. set to this.radius to get object center
     // Polygonal Properties
-    vertexNum:     number               = 5 // 0 if form == Form.Circle
-    vertices:      Coord[]              = [] // Positions of vertices in relation to the center of the object (differs from the top-left system of the HTML canvas)
-    lines:         Line[]               = [] // Contains pairs of coordinates to dictate where to draw lines; not a vector //TODO Consider implementation of Line[] as a vector
+    vertexNum:     number               = 5 // 0 if form == circle
+    vertices:      Vertex[]             = [] // Positions of vertices in relation to the center of the object (differs from the top-left system of the HTML canvas)
+    edges:         Edge[]               = [] // Contains pairs of coordinates to dictate where to draw edges; not a vector //TODO Consider implementation of Edge[] as a vector
     radius:        number               = 100 // Radius of the object; used for Form.Circle/to find where to place points of a regular polygon
     // Form.Polygon where vertexNum === 4
     height:        number               = 0
@@ -42,8 +47,6 @@ class Body {
 
     constructor(options: Partial<Body>) {
         _.merge(this, options)
-        console.log(this)
-
         this._initProperties()
     }
     
@@ -51,44 +54,47 @@ class Body {
     private _initProperties() {
         // Permit usage of width/height for rectangles; default to _calculateVertexPos()
         if (this.vertexNum == 4 && this.height !== 0 && this.width !== 0) {
-            const height = this.height
             const width = this.width
+            const height = this.height
 
             // Define object vertices clockwise; uses 'local' scale, translated by position at render step
             this.vertices = [
-                {x: 0,     y: 0},
-                {x: 0,     y: height},
-                {x: width, y: height},
-                {x: width, y: 0},
+                {id: 0, x: 0,     y: 0},
+                {id: 1, x: 0,     y: height},
+                {id: 2, x: width, y: height},
+                {id: 3, x: width, y: 0},
             ]
         }
         // Initialize bodies of type Form.Circle as having 30 vertices for physics calculations
         else if (this.vertexNum == 0) {
+            this.origin = {x: this.radius, y: this.radius} // Move origin to cartesian center
             this.vertices = this._calculateVertexPos(30)
         }
         // Calculate vertices for polygon with n-vertices
         else {
+            this.origin = {x: this.radius, y: this.radius} // Move origin to cartesian center
             this.vertices = this._calculateVertexPos(this.vertexNum)
         }
         
-        // Re-calculate lines for each vertex
+        // Re-calculate edges for each vertex
         for (let i=0; i<this.vertexNum; i++) {
             for (let j=i+1; j<this.vertexNum; j++) {
-                // console.log(i, j, this.vertices[i], this.vertices[j])
-                this.lines.push({
-                    points: [
-                        { x: this.vertices[i].x, y: this.vertices[i].y },
-                        { x: this.vertices[j].x, y: this.vertices[j].y },
-                    ],
-                    internal: false
+                const p1 = this.vertices[i]
+                const p2 = this.vertices[j]
+                // Calculate if the edge is internal
+                const external = (p1.id+1===p2.id)||(p1.id-1===p2.id)||(p1.id-1<0&&p2.id===this.vertexNum-1)
+
+                this.edges.push({
+                    points: [p1, p2],
+                    internal: !external
                 })
             }
         }
     }
 
-    private _calculateVertexPos(n = this.vertexNum, r = this.radius): Coord[] {
+    private _calculateVertexPos(n = this.vertexNum, r = this.radius): Vertex[] {
         const a = (2 * Math.PI)/n
-        const vertices: Coord[] = [];
+        const vertices: Vertex[] = [];
 
         // Optimize vertex creation if #vertices is even
         // Takes (n-2)/2 vertices and calculates their position
@@ -99,12 +105,12 @@ class Body {
                 const x = r * Math.cos(a*i)
                 const y = r * Math.sin(a*i)
 
-                vertices.push({ x: x, y: y  })
-                vertices.push({ x: x, y: -y })
+                vertices.push({id:(i-1),   x: x, y: y })
+                vertices.push({id:(n-1-i), x: x, y: -y})
             }
 
-            vertices.push({ x: r,  y: 0 })
-            vertices.push({ x: -r, y: 0 })
+            vertices.push({id:(n-1),   x: r,  y: 0})
+            vertices.push({id:(n/2)-1, x: -r, y: 0})
         } 
         // Optimize vertex creation if #vertices is odd; assumes no rotation present
         // Takes (n-1)/2 vertices and calculates their position
@@ -115,15 +121,17 @@ class Body {
                 const x = r * Math.cos(a*i)
                 const y = r * Math.sin(a*i)
 
-                vertices.push({ x: x, y: y  })
-                vertices.push({ x: x, y: -y })
+                vertices.push({id:(i-1),   x: x, y: y })
+                vertices.push({id:(n-i-1), x: x, y: -y})
             }
 
-            vertices.push({ x: r, y: 0 })    
+            vertices.push({id:(n-1), x: r, y: 0})    
         }
 
         return vertices
     }
+
+    private _calculateEdges() {}
 }
 
 export { Form, Body }
