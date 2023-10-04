@@ -1,67 +1,87 @@
 <script lang="ts">
 	/* ----------------------- IMPORTS ---------------------- */
-	import { onMount } from 'svelte';
-	import { Body } from '$lib/physics/objects/body';
-	import { Collection } from './physics/objects/collection';
+	import { Collection } from "$lib/physics/objects/collection"
+	import { Engine } from "$lib/physics/core/engine"
+	import { Body } from "$lib/physics/objects/body"
+	import { onMount } from "svelte"
 
 	/* ---------------------- VARIABLES --------------------- */
 	// Render viewport
 	let wrapper: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
-	let size = { width: 800, height: 600 }; // Static size of the canvas; I don't particularly think this should change
+	let size = { width: 800, height: 600 }; // Static size of the canvas; I don"t particularly think this should change
 	let view = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }; // Location of the viewport in relation to the canvas
-
-	// Render config
+	// Render props
 	let fps = 60;
 	let dfps = fps / 1000;
 	let halt = false;
 	let delta;
 	let time = Date.now();
 	let prev = time;
+	// Render display config
+	const wireframe = true
+	const showVertices = true
+	const showIDs = true 
+	const showOrigin = true
+	const showRotation = true
+	// Engine props
+	let world = new Collection({ name: "World" });
+	let engine = new Engine({ world: world })
 
 	// Render objects
-	let world = new Collection({ name: 'World' });
-
-	let hexagon = new Body({ position: { x: 10, y: 10 }, vertexNum: 6 });
-	let octagon = new Body({ position: { x: 310, y: 10 }, vertexNum: 8 });
-	let decagon = new Body({ position: { x: 610, y: 10 }, vertexNum: 10 });
-
-	let triangle = new Body({ position: { x: 10, y: 300 }, vertexNum: 3 });
-	let pentagon = new Body({ position: { x: 310, y: 300 }, vertexNum: 5 });
-	let septagon = new Body({ position: { x: 610, y: 300 }, vertexNum: 7 });
-
-	// let circle = new Body({ position: {x: 810, y: 10 }, radius: 200, form: Form.Circle })
-	// let polyCircle = new Body({ position: {x: 810, y: 10}, radius: 200, vertexNum: 30, })
-	let rect = new Body({ position: { x: 810, y: 10 }, vertexNum: 4, width: 100, height: 50 });
+	let rect = new Body({
+		name: "Rectangle",
+		form: "polygon",	
+		width: 100,
+		height: 50,
+		position: {x: 300, y: 300},
+		render: {
+			fillStyle: "red",
+			strokeStyle: "white",
+			lineWidth: 3
+		},
+	})
 
 	world.add([
-		octagon,
-		decagon,
-		hexagon,
-
-		triangle,
-		pentagon,
-		septagon,
-
-		// circle,
-		// polyCircle
-		rect
+		rect,
+		// rrect
 	]);
 
 	/* ---------------------- FUNCTIONS --------------------- */
 	function draw() {
 		ctx.clearRect(0, 0, size.width, size.height);
 
-		function point(x: number, y: number, color = 'red', size = 2) {
-			const _strokeStyle = ctx.strokeStyle;
-			const _lineWidth = ctx.lineWidth;
+		function point(x: number, y: number, color = "red", size = 2) {
+			const _strokeStyle = ctx.strokeStyle
+			const _fillStyle = ctx.fillStyle
+			const _lineWidth = ctx.lineWidth
 
-			ctx.strokeStyle = color;
-			ctx.lineWidth = 1;
-			ctx.strokeRect(x, y, size, size);
-			ctx.strokeStyle = _strokeStyle;
-			ctx.lineWidth = _lineWidth;
+			ctx.lineWidth = 1
+			ctx.strokeStyle = color
+			ctx.fillStyle = color
+			ctx.fillRect(x-size/2, y-size/2, size, size)
+
+			ctx.strokeStyle = _strokeStyle
+			ctx.fillStyle = _fillStyle
+			ctx.lineWidth = _lineWidth
+		}
+
+		function text(msg="0", x: number, y: number, color="white") {
+			const _strokeStyle = ctx.strokeStyle
+			const _fillStyle = ctx.fillStyle
+			const _lineWidth = ctx.lineWidth
+
+			ctx.fillStyle = "rgba(20, 20, 20, 0.7)"
+			ctx.fillRect(x, y-14, ctx.measureText(msg).width, 16)
+
+			ctx.fillStyle = color
+			ctx.strokeStyle = color
+			ctx.fillText(msg, x, y)
+
+			ctx.strokeStyle = _strokeStyle
+			ctx.fillStyle = _fillStyle
+			ctx.lineWidth = _lineWidth
 		}
 
 		function _polygon(body: Body) {
@@ -70,45 +90,83 @@
 				y: body.position.y + body.origin.y
 			};
 
-            ctx.font = "16px serif"
+            ctx.font = "16px sans-serif"            
+			ctx.strokeStyle = body.render.strokeStyle
+			ctx.fillStyle = body.render.fillStyle
+			ctx.lineWidth = body.render.lineWidth
+            
+            ctx.beginPath()
 
-			ctx.beginPath();
+			// Traverse outside vertices; plot external edges
+            ctx.moveTo(origin.x + body.vertices[0].x, origin.y + body.vertices[0].y)
+            for (let vertex of body.vertices.slice(1)) {
+                ctx.lineTo(origin.x + vertex.x, origin.y + vertex.y)
+            }
+			
+			// Fill polygon
+			ctx.closePath()
+			ctx.stroke()
+			if (!wireframe) ctx.fill()
 
-			ctx.strokeStyle = body.render.strokeStyle;
-			ctx.fillStyle = body.render.fillStyle;
-			ctx.lineWidth = body.render.lineWidth;
+			// Show internal edges in wireframe mode
+			if (wireframe) {
+				ctx.lineWidth = 1
+				ctx.strokeStyle = "gray"
+				ctx.beginPath()
 
-			for (let line of body.edges) {
-                if (line.internal) {
-                    continue
-                }
+				for (let edge of body.internalEdges) {
+					// console.log(edge)
+					const p1 = edge.points[0]
+					const p2 = edge.points[1]
+	
+					ctx.moveTo(origin.x + p1.x, origin.y + p1.y)
+					ctx.lineTo(origin.x + p2.x, origin.y + p2.y)
+				}
 
-				const p1 = line.points[0];
-				const p2 = line.points[1];
+				ctx.stroke()
+				ctx.closePath()
+			} 
 
-                ctx.fillText(`${p1.id}`, origin.x + p1.x+5, origin.y + p1.y+5)
-                ctx.fillText(`${p2.id}`, origin.x + p2.x+5, origin.y + p2.y+5)
+			// Show rotation
+			if (showRotation) {
+				// Current rotation
+				ctx.lineWidth = 1
+				ctx.strokeStyle = "red"
 
-				// Points
-				point(origin.x + p1.x, origin.y + p1.y, 'yellow');
-				point(origin.x + p2.x, origin.y + p2.y, 'yellow');
-				// edges
-				ctx.moveTo(origin.x + p1.x, origin.y + p1.y);
-				ctx.lineTo(origin.x + p2.x, origin.y + p2.y);
+				const rX = origin.x + (body.radius/1.5) * Math.cos(body.rotation)
+				const rY = origin.y + (body.radius/1.5) * Math.sin(body.rotation)
+				
+				ctx.beginPath()
+				ctx.moveTo(origin.x, origin.y)
+				ctx.lineTo(rX, rY)
+				ctx.stroke()
+				ctx.closePath()
+				// Show rotation at 0 degrees
+				ctx.strokeStyle = "green"
+				
+				ctx.beginPath()
+				ctx.moveTo(origin.x, origin.y)
+				ctx.lineTo(origin.x + body.radius/1.5, origin.y)
+				ctx.stroke()
+				ctx.closePath()
 
-                ctx.fillStyle = "white"
-                ctx.fillText(`${p1.id}`, origin.x + p1.x+5, origin.y + p1.y+5)
-                ctx.fillText(`${p2.id}`, origin.x + p2.x+5, origin.y + p2.y+5)
+				// text(`${this.rotation}`, origin.x + 10, origin.y - 10)
 			}
 
-			ctx.stroke();
-			// ctx.fill()
-			ctx.closePath();
+			// Show top-left corner & origin
+			if (showOrigin) {
+				point(body.position.x, body.position.y, "red")
+				point(origin.x, origin.y, "blue")
+			} 
 
-			// Show top-left corner
-			point(body.position.x, body.position.y, 'red');
-			// Show origin?
-			point(origin.x, origin.y, 'blue');
+			// Plot vertex points & id
+			if (showVertices||showIDs) for (let vertex of body.vertices) {
+				const tx = origin.x + vertex.x
+				const ty = origin.y + vertex.y
+
+				if (showVertices) point(tx, ty, "yellow", 4)
+				if (showIDs) text(`${body.id}.${vertex.id}`, tx, ty)
+			}
 		}
 
 		function _circle(body: Body) {
@@ -118,9 +176,9 @@
 			};
 
 			// Show top-left corner
-			point(body.position.x, body.position.y, 'red');
+			point(body.position.x, body.position.y, "red");
 			// Show origin?
-			point(origin.x, origin.y, 'blue');
+			point(origin.x, origin.y, "blue");
 
 			ctx.beginPath();
 
@@ -133,10 +191,15 @@
 		}
 
 		world.bodies.forEach((body) => {
-			if (body.form === 'polygon') {
-				_polygon(body);
-			} else if (body.form === 'circle') {
-				_circle(body);
+			switch (body.form) {
+				case "polygon":
+					_polygon(body)
+					break
+				case "circle":
+					_circle(body)
+					break
+				default:
+					console.log(`Unsupported invalid form ${body.form}`)
 			}
 		});
 	}
@@ -154,14 +217,15 @@
 		delta = time - prev;
 
 		if (delta >= dfps) {
-			tick();
+			tick(delta);
 		}
 	}
 
-	function tick() {
-		draw();
+	function tick(dt: number) {
+		engine.step(dt)
+		draw()
 
-		halt = true;
+		// halt = true;
 	}
 
 	/* ----------------------- RUNTIME ---------------------- */
@@ -178,7 +242,7 @@
 		canvas.width = size.width;
 		canvas.height = size.height;
 
-		ctx = canvas.getContext('2d');
+		ctx = canvas.getContext("2d");
 
 		run();
 	});

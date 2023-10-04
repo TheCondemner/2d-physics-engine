@@ -1,5 +1,6 @@
 /* ----------------------- IMPORTS ---------------------- */
-import type { Body } from "./body";
+import { id } from "../core/common"
+import type { Body } from "./body"
 import _ from "lodash"
 
 /* ---------------------- VARIABLES --------------------- */
@@ -8,7 +9,7 @@ import _ from "lodash"
 /* ----------------------- EXPORT ----------------------- */
 export class Collection {
     // Header
-    readonly id:   number;
+    readonly id:   number            = id.next()
     readonly type: string            = "collection"
     name:          string            = "DEFAULT_WORLD"
     parent:        object | null     = null
