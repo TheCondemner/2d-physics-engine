@@ -1,7 +1,7 @@
 /* ----------------------- IMPORTS ---------------------- */
 import type { Collection } from "../objects/collection"
 import type { Body } from "../objects/body"
-import { id } from "./common"
+import { id } from "./shared"
 import _ from "lodash"
 
 
@@ -35,6 +35,7 @@ class Engine {
     /* ------------------- PRIVATE METHODS ------------------ */
     // Move engine by 1 dt in time
     private _step(dt: number) {
+        console.log("_step")
         // Set initial step conditions
         const allBodies = this.world.bodies
         this.deltaPrev = this.delta // Update time deltas for new step
@@ -69,12 +70,15 @@ class Engine {
             body.force.x += this.gravity.x * this.gravity.m
             body.force.y += this.gravity.y * this.gravity.m
         }
+        console.log("_resolvingGravity", bodies)
     }
 
     private _updateBodies(bodies: Body|Body[], dt: number) {
         bodies = [].concat(bodies)
 
         for (const body of bodies) body.update(dt)
+
+        console.log("_updatingBodies", bodies)
     }
 }
 

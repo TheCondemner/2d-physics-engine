@@ -1,5 +1,5 @@
 /* ----------------------- IMPORTS ---------------------- */
-import { id } from "../core/common"
+import { id } from "../core/shared"
 import type { Body } from "./body"
 import _ from "lodash"
 

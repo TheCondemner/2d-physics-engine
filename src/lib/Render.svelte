@@ -84,6 +84,25 @@
 			ctx.lineWidth = _lineWidth
 		}
 
+		function line(x1: number, y1: number, x2: number, y2: number, c:string="white", l:number=2) {
+			const _strokeStyle = ctx.strokeStyle
+			const _fillStyle = ctx.fillStyle
+			const _lineWidth = ctx.lineWidth
+
+			ctx.strokeStyle = c
+			ctx.lineWidth = l
+
+			ctx.beginPath()
+			ctx.moveTo(x1, y1)
+			ctx.lineTo(x2, y2)
+			ctx.stroke()
+			ctx.closePath()
+
+			ctx.strokeStyle = _strokeStyle
+			ctx.fillStyle = _fillStyle
+			ctx.lineWidth = _lineWidth	
+		}
+
 		function _polygon(body: Body) {
 			const origin = {
 				x: body.position.x + body.origin.x,
@@ -222,10 +241,11 @@
 	}
 
 	function tick(dt: number) {
+		console.log("tick")
 		engine.step(dt)
 		draw()
 
-		// halt = true;
+		// halt = true
 	}
 
 	/* ----------------------- RUNTIME ---------------------- */

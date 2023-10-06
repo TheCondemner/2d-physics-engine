@@ -18,12 +18,3 @@ export interface RenderProps {
     strokeStyle?: string | CanvasGradient | CanvasPattern
     lineWidth?:   number
 }
-
-export interface Cartesian {
-    x: number
-    y: number
-}
-
-export function assign() {  
-    
-}

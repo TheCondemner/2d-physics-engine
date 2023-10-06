@@ -1,12 +1,12 @@
 /* ----------------------- IMPORTS ---------------------- */
-import type { RenderProps, Cartesian } from "../core/common"
-import type { Collection } from "./collection"
-import { id } from "../core/common"
+import type { Collection } from "$lib/physics/objects/collection"
+import { Vector, type Vector2 } from "$lib/physics/math/vector"
+import type { RenderProps } from "$lib/physics/core/shared"
+import { id } from "$lib/physics/core/shared"
 import _ from "lodash" 
 
 /* ---------------------- VARIABLES --------------------- */
-
-interface Vertex extends Cartesian {
+interface Vertex extends Vector2 {
     id: number
 }
 
@@ -18,44 +18,45 @@ interface Edge {
 type Form = "polygon"|"circle"
 
 /* ----------------------- EXPORT ----------------------- */
+
 class Body {
     // Header
-    readonly id:   number               = id.next()
-    readonly type: string               = "body"
-    name:          string               = "DEFAULT_BODY"
-    parent:        null | Collection    = null
+    readonly id:   number          = id.next()
+    readonly type: string          = "body"
+    name:          string          = "DEFAULT_BODY"
+    parent:        null|Collection = null
     // Engine properties
-    delta:         number               = 0
-    deltaPrev:     number               = 0
+    delta:     number = 0
+    deltaPrev: number = 0
     // Internal
-    form:          Form                 = "polygon" // Mostly interpreted in Render, dictates how to display the given object
-    position:      Cartesian            = {x: 0, y: 0} // Considers position; measured from top-left
-    rotation:      number               = 0 // Angle from positive x-axis in radians
-    origin:        Cartesian            = {x: 0, y: 0} // What this.position is translated by for render operations; e.g. set to this.radius to get object center
+    form:     Form    = "polygon" // Mostly interpreted in Render, dictates how to display the given object
+    position: Vector2 = {x: 0, y: 0} // Considers position; measured from top-left
+    rotation: number  = 0 // Angle from positive x-axis in radians
+    origin:   Vector2 = {x: 0, y: 0} // What this.position is translated by for render operations; e.g. set to this.radius to get object center
     // Physics Properties
-    center:        Cartesian            = {x: 0, y: 0} // Center of mass of object; set to the center (r, r) at initialization
-    static:        boolean              = false // Whether body will be ignored during physics step
-    mass:          number               = 1
-    velocity:      Cartesian            = {x: 0, y: 0}
-    angVelocity:   number               = 0
-    airFriction:   number               = 0.01
+    center:      Vector2 = {x: 0, y: 0} // Center of mass of object; set to the center (r, r) at initialization
+    static:      boolean = false // Whether body will be ignored during physics step
+    mass:        number  = 1
+    velocity:    Vector2 = {x: 0, y: 0}
+    angVelocity: number  = 0
+    airFriction: number  = 0.001
     // Buffers
-    positionPrev:  Cartesian            = {x: 0, y: 0}
-    force:         Cartesian            = {x: 0, y: 0} // Buffer: transposed unto velocity at apply step
-    torque:        number               = 0 // Buffer; transposed onto angVelocity at apply step
+    positionPrev:  Vector2 = {x: 0, y: 0}
+    force:         Vector2 = {x: 0, y: 0} // Buffer: transposed unto velocity at apply step
+    torque:        number  = 0 // Buffer; transposed onto angVelocity at apply step
     // Polygonal Properties
-    sides:         number               = 5 // 0 if form == circle
-    radius:        number               = 100 // Radius of the object; used for Form.Circle/to find where to place points of a regular polygon
+    sides:         number = 5 // 0 if form == circle
+    radius:        number = 100 // Radius of the object; used for Form.Circle/to find where to place points of a regular polygon
     
-    vertices:      Vertex[]             = [] // Positions of vertices in relation to the center of the object (differs from the top-left system of the HTML canvas)
-    _vertices:     Vertex[]             = [] // Clone of [vertices] at initial position
+    vertices:      Vertex[] = [] // Ppositions of vertices in relation to the center of the object (differs from the top-left system of the HTML canvas)
+    _vertices:     Vertex[] = [] // Clone of [vertices] at initial position
 
-    edges:         Edge[]               = [] //Contains pairs of coordinates to dictate where to draw edges; not a vector //TODO Consider implementation of Edge[] as a vector
-    internalEdges: Edge[]               = [] 
-    externalEdges: Edge[]               = [] //! DEPRECIATED IN FAVOR OF VERTEX TRAVERSAL  
+    edges:         Edge[] = [] //Contains pairs of coordinates to dictate where to draw edges; not a vector //TODO Consider implementation of Edge[] as a vector
+    internalEdges: Edge[] = [] 
+    externalEdges: Edge[] = [] //! DEPRECIATED IN FAVOR OF VERTEX TRAVERSAL  
     // Form.Polygon where vertexNum === 4
-    height:        number               = 0
-    width:         number               = 0
+    width:         number = 0
+    height:        number = 0
     // Render
     render:        Partial<RenderProps> = { fillStyle: "#1f1f1f", strokeStyle: "white", lineWidth: 2 }
 
@@ -117,18 +118,19 @@ class Body {
 
         const delta = this.delta
         const delta2 = Math.pow(delta, 2) 
-        const velocityPrev = {
-            x: (this.position.x - this.positionPrev.x),
-            y: (this.position.y - this.positionPrev.y),
-        }
-        const airFriction = 1 - this.airFriction * delta
+        const correction = 1
+        const velocityPrev = Vector.mul([
+            Vector.sub([this.position, this.positionPrev]),
+            {x: correction, y: correction}
+        ])
+        const airFriction = 1 - this.airFriction * (delta * (60 / 1000))
+        // const airFriction = 0 //! TEMPORARY FOR TESTING SAT IMPLEMENTATION
 
         this.velocity.x = (velocityPrev.x * airFriction) + (this.force.x / this.mass) * delta2
         this.velocity.y = (velocityPrev.y * airFriction) + (this.force.y / this.mass) * delta2
 
         this.positionPrev = _.clone(this.position)
-        this.position.x += this.velocity.x
-        this.position.y += this.velocity.y
+        this.position = Vector.add([this.position, this.velocity])
     }
 
     // Calculate the position of vertices of an n-sided shape, on circle with radius r
